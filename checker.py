@@ -7,6 +7,8 @@ from typing import Dict, List, Set, Tuple
 from datetime import datetime
 import io
 import asyncio
+from flask import Flask
+import threading
 
 TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 PREFIX = '!'
@@ -16,6 +18,17 @@ intents.message_content = True
 bot = commands.Bot(command_prefix=PREFIX, intents=intents)
 
 FFLAGS_URL = "https://imtheo.lol/Offsets/FFlags.json"
+
+# Create a simple Flask web server to keep the bot alive
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "Discord FFlag Bot is running!"
+
+def run_web_server():
+    port = int(os.environ.get('PORT', 8080))
+    app.run(host='0.0.0.0', port=port)
 
 class FFlagChecker:
     @staticmethod
@@ -123,6 +136,7 @@ class FFlagChecker:
 @bot.event
 async def on_ready():
     print(f'{bot.user} has connected to Discord!')
+    print(f'Bot is ready to check FFlags!')
 
 @bot.command(name='checkfflags', aliases=['checkflags', 'fflagcheck'])
 async def check_fflags(ctx):
@@ -169,6 +183,12 @@ async def check_fflags(ctx):
         await status_msg.edit(content=f"❌ Error: {str(e)}")
 
 async def main():
+    # Start the web server in a separate thread
+    thread = threading.Thread(target=run_web_server)
+    thread.daemon = True
+    thread.start()
+    
+    # Start the Discord bot
     async with bot:
         await bot.start(TOKEN)
 
