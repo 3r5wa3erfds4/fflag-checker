@@ -7,8 +7,7 @@ from typing import Dict, List, Set, Tuple
 from datetime import datetime
 import io
 import asyncio
-from flask import Flask
-import threading
+import time
 
 TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 PREFIX = '!'
@@ -19,16 +18,24 @@ bot = commands.Bot(command_prefix=PREFIX, intents=intents)
 
 FFLAGS_URL = "https://imtheo.lol/Offsets/FFlags.json"
 
-# Create a simple Flask web server to keep the bot alive
-app = Flask(__name__)
+# Try to import Flask, but don't fail if it's not available
+try:
+    from flask import Flask
+    FLASK_AVAILABLE = True
+except ImportError:
+    FLASK_AVAILABLE = False
+    print("Flask not available, web server will not start")
 
-@app.route('/')
-def home():
-    return "Discord FFlag Bot is running!"
+if FLASK_AVAILABLE:
+    app = Flask(__name__)
 
-def run_web_server():
-    port = int(os.environ.get('PORT', 8080))
-    app.run(host='0.0.0.0', port=port)
+    @app.route('/')
+    def home():
+        return "Discord FFlag Bot is running!"
+
+    def run_web_server():
+        port = int(os.environ.get('PORT', 8080))
+        app.run(host='0.0.0.0', port=port)
 
 class FFlagChecker:
     @staticmethod
@@ -133,6 +140,15 @@ class FFlagChecker:
         file_data.seek(0)
         return file_data
 
+    @staticmethod
+    def format_time(seconds: float) -> str:
+        if seconds < 0.001:
+            return f"{seconds * 1000000:.0f}µs"
+        elif seconds < 1:
+            return f"{seconds * 1000:.2f}ms"
+        else:
+            return f"{seconds:.2f}s"
+
 @bot.event
 async def on_ready():
     print(f'{bot.user} has connected to Discord!')
@@ -146,6 +162,8 @@ async def check_fflags(ctx):
     
     attachment = ctx.message.attachments[0]
     
+    start_time = time.time()
+    
     status_msg = await ctx.send("🔄 Checking FFlags...")
     
     try:
@@ -158,6 +176,8 @@ async def check_fflags(ctx):
         
         valid_fflags, invalid_fflags = FFlagChecker.compare_fflags(local_fflags, website_fflags)
         
+        total_time = time.time() - start_time
+        
         await status_msg.delete()
         
         response = f"## 📊 FFlag Results\n\n"
@@ -165,6 +185,7 @@ async def check_fflags(ctx):
         response += f"**Total flags checked:** {len(local_fflags)}\n"
         response += f"**✅ Valid flags:** {len(valid_fflags)}\n"
         response += f"**❌ Invalid flags:** {len(invalid_fflags)}\n"
+        response += f"**⏱️ Time taken:** {FFlagChecker.format_time(total_time)}\n"
         
         await ctx.send(response)
         
@@ -183,12 +204,13 @@ async def check_fflags(ctx):
         await status_msg.edit(content=f"❌ Error: {str(e)}")
 
 async def main():
-    # Start the web server in a separate thread
-    thread = threading.Thread(target=run_web_server)
-    thread.daemon = True
-    thread.start()
+    if FLASK_AVAILABLE:
+        import threading
+        thread = threading.Thread(target=run_web_server)
+        thread.daemon = True
+        thread.start()
+        print("Web server started on port", os.environ.get('PORT', 8080))
     
-    # Start the Discord bot
     async with bot:
         await bot.start(TOKEN)
 
@@ -196,4 +218,5 @@ if __name__ == "__main__":
     if not TOKEN:
         print("ERROR: DISCORD_BOT_TOKEN environment variable not set!")
     else:
+        print("Starting Discord bot...")
         asyncio.run(main())
