@@ -8,6 +8,7 @@ from datetime import datetime
 import io
 import asyncio
 import time
+import re
 
 TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 PREFIX = '!'
@@ -51,6 +52,19 @@ class FFlagChecker:
                         raise Exception(f"Failed to fetch FFlags. Status code: {response.status}")
             except Exception as e:
                 raise Exception(f"Error fetching FFlags: {str(e)}")
+
+    @staticmethod
+    def parse_json_content(content: str) -> Dict:
+        try:
+            data = json.loads(content)
+            if isinstance(data, dict):
+                return data
+            elif isinstance(data, list):
+                return {flag: "" for flag in data}
+            else:
+                raise Exception("JSON format not recognized")
+        except json.JSONDecodeError as e:
+            raise Exception(f"Invalid JSON: {str(e)}")
 
     @staticmethod
     def parse_uploaded_file(content: str, filename: str) -> Dict:
@@ -155,53 +169,96 @@ async def on_ready():
     print(f'Bot is ready to check FFlags!')
 
 @bot.command(name='checkfflags', aliases=['checkflags', 'fflagcheck'])
-async def check_fflags(ctx):
-    if not ctx.message.attachments:
-        await ctx.send("❌ Please upload a JSON or TXT file with the command.\nUsage: `!checkfflags` and attach a file")
-        return
-    
-    attachment = ctx.message.attachments[0]
-    
+async def check_fflags(ctx, *, json_content: str = None):
     start_time = time.time()
     
-    status_msg = await ctx.send("🔄 Checking FFlags...")
+    # Method 1: Check if there's an attachment
+    if ctx.message.attachments:
+        attachment = ctx.message.attachments[0]
+        
+        if not attachment.filename.endswith(('.json', '.txt')):
+            await ctx.send("❌ Please upload a JSON or TXT file")
+            return
+        
+        status_msg = await ctx.send("🔄 Checking FFlags from file...")
+        
+        try:
+            website_fflags = await FFlagChecker.fetch_fflags()
+            
+            file_content = await attachment.read()
+            file_text = file_content.decode('utf-8')
+            
+            local_fflags = FFlagChecker.parse_uploaded_file(file_text, attachment.filename)
+            
+            valid_fflags, invalid_fflags = FFlagChecker.compare_fflags(local_fflags, website_fflags)
+            
+            total_time = time.time() - start_time
+            
+            await status_msg.delete()
+            
+            response = f"## 📊 FFlag Results\n\n"
+            response += f"**Source:** File upload `{attachment.filename}`\n"
+            response += f"**Total flags checked:** {len(local_fflags)}\n"
+            response += f"**✅ Valid flags:** {len(valid_fflags)}\n"
+            response += f"**❌ Invalid flags:** {len(invalid_fflags)}\n"
+            response += f"**⏱️ Time taken:** {FFlagChecker.format_time(total_time)}\n"
+            
+            await ctx.send(response)
+            
+            if valid_fflags:
+                valid_file = FFlagChecker.create_json_file(valid_fflags, "valid")
+                await ctx.send(file=discord.File(valid_file, filename=f"valid_fflags.json"))
+            
+            if invalid_fflags:
+                invalid_file = FFlagChecker.create_json_file(invalid_fflags, "invalid")
+                await ctx.send(file=discord.File(invalid_file, filename=f"invalid_fflags.json"))
+            
+            if not valid_fflags and not invalid_fflags:
+                await ctx.send("❌ No flags were found in the uploaded file")
+            
+        except Exception as e:
+            await status_msg.edit(content=f"❌ Error: {str(e)}")
     
-    try:
-        website_fflags = await FFlagChecker.fetch_fflags()
+    # Method 2: Check if there's JSON in the message
+    elif json_content:
+        status_msg = await ctx.send("🔄 Checking FFlags from message...")
         
-        file_content = await attachment.read()
-        file_text = file_content.decode('utf-8')
-        
-        local_fflags = FFlagChecker.parse_uploaded_file(file_text, attachment.filename)
-        
-        valid_fflags, invalid_fflags = FFlagChecker.compare_fflags(local_fflags, website_fflags)
-        
-        total_time = time.time() - start_time
-        
-        await status_msg.delete()
-        
-        response = f"## 📊 FFlag Results\n\n"
-        response += f"**File:** `{attachment.filename}`\n"
-        response += f"**Total flags checked:** {len(local_fflags)}\n"
-        response += f"**✅ Valid flags:** {len(valid_fflags)}\n"
-        response += f"**❌ Invalid flags:** {len(invalid_fflags)}\n"
-        response += f"**⏱️ Time taken:** {FFlagChecker.format_time(total_time)}\n"
-        
-        await ctx.send(response)
-        
-        if valid_fflags:
-            valid_file = FFlagChecker.create_json_file(valid_fflags, "valid")
-            await ctx.send(file=discord.File(valid_file, filename=f"valid_fflags.json"))
-        
-        if invalid_fflags:
-            invalid_file = FFlagChecker.create_json_file(invalid_fflags, "invalid")
-            await ctx.send(file=discord.File(invalid_file, filename=f"invalid_fflags.json"))
-        
-        if not valid_fflags and not invalid_fflags:
-            await ctx.send("❌ No flags were found in the uploaded file")
-        
-    except Exception as e:
-        await status_msg.edit(content=f"❌ Error: {str(e)}")
+        try:
+            website_fflags = await FFlagChecker.fetch_fflags()
+            
+            local_fflags = FFlagChecker.parse_json_content(json_content)
+            
+            valid_fflags, invalid_fflags = FFlagChecker.compare_fflags(local_fflags, website_fflags)
+            
+            total_time = time.time() - start_time
+            
+            await status_msg.delete()
+            
+            response = f"## 📊 FFlag Results\n\n"
+            response += f"**Source:** Message JSON\n"
+            response += f"**Total flags checked:** {len(local_fflags)}\n"
+            response += f"**✅ Valid flags:** {len(valid_fflags)}\n"
+            response += f"**❌ Invalid flags:** {len(invalid_fflags)}\n"
+            response += f"**⏱️ Time taken:** {FFlagChecker.format_time(total_time)}\n"
+            
+            await ctx.send(response)
+            
+            if valid_fflags:
+                valid_file = FFlagChecker.create_json_file(valid_fflags, "valid")
+                await ctx.send(file=discord.File(valid_file, filename=f"valid_fflags.json"))
+            
+            if invalid_fflags:
+                invalid_file = FFlagChecker.create_json_file(invalid_fflags, "invalid")
+                await ctx.send(file=discord.File(invalid_file, filename=f"invalid_fflags.json"))
+            
+            if not valid_fflags and not invalid_fflags:
+                await ctx.send("❌ No flags were found in the message")
+            
+        except Exception as e:
+            await status_msg.edit(content=f"❌ Error: {str(e)}")
+    
+    else:
+        await ctx.send("❌ Please either:\n1. Upload a JSON or TXT file with the command\n2. Or provide JSON in the message\n\n**Usage:**\n`!checkfflags` (with attached file)\n`!checkfflags {\"FFlagExample\": \"True\"}`")
 
 async def main():
     if FLASK_AVAILABLE:
@@ -217,6 +274,7 @@ async def main():
 if __name__ == "__main__":
     if not TOKEN:
         print("ERROR: DISCORD_BOT_TOKEN environment variable not set!")
+        print("Please set the DISCORD_BOT_TOKEN environment variable in Render dashboard")
     else:
         print("Starting Discord bot...")
         asyncio.run(main())
