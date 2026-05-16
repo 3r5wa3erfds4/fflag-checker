@@ -235,7 +235,7 @@ async def check_fflags(ctx, *, json_content: str = None):
             await status_msg.delete()
             
             response = f"## 📊 FFlag Results\n\n"
-            response += f"**Source:** Message JSON\n"
+            response += f"**Source:** Message\n"
             response += f"**Total flags checked:** {len(local_fflags)}\n"
             response += f"**✅ Valid flags:** {len(valid_fflags)}\n"
             response += f"**❌ Invalid flags:** {len(invalid_fflags)}\n"
