@@ -147,6 +147,17 @@ class FFlagChecker:
         return valid_fflags, invalid_fflags
 
     @staticmethod
+    def combine_fflags(all_fflags: List[Dict]) -> Dict:
+        combined = {}
+        
+        for fflag_dict in all_fflags:
+            for key, value in fflag_dict.items():
+                if key not in combined:
+                    combined[key] = value
+        
+        return combined
+
+    @staticmethod
     def create_json_file(data: Dict, flag_type: str) -> io.BytesIO:
         file_data = io.BytesIO()
         json_content = json.dumps(data, indent=4, ensure_ascii=False)
@@ -259,6 +270,57 @@ async def check_fflags(ctx, *, json_content: str = None):
     
     else:
         await ctx.send("❌ Please either:\n1. Upload a JSON or TXT file with the command\n2. Or provide JSON in the message\n\n**Usage:**\n`!checkfflags` (with attached file)\n`!checkfflags {\"FFlagExample\": \"True\"}`")
+
+@bot.command(name='combinefflags', aliases=['combineflags', 'fflagcombine'])
+async def combine_fflags(ctx):
+    if not ctx.message.attachments:
+        await ctx.send("❌ Please upload JSON or TXT files with the command.\nUsage: `!combinefflags` and attach multiple files")
+        return
+    
+    status_msg = await ctx.send("🔄 Combining FFlags from files...")
+    start_time = time.time()
+    
+    try:
+        all_fflags = []
+        files_processed = 0
+        total_flags = 0
+        
+        for attachment in ctx.message.attachments:
+            if not attachment.filename.endswith(('.json', '.txt')):
+                await ctx.send(f"⚠️ Skipping `{attachment.filename}` - not a JSON or TXT file")
+                continue
+            
+            file_content = await attachment.read()
+            file_text = file_content.decode('utf-8')
+            
+            fflags_dict = FFlagChecker.parse_uploaded_file(file_text, attachment.filename)
+            all_fflags.append(fflags_dict)
+            files_processed += 1
+            total_flags += len(fflags_dict)
+        
+        if not all_fflags:
+            await status_msg.edit(content="❌ No valid JSON or TXT files found to combine")
+            return
+        
+        combined_fflags = FFlagChecker.combine_fflags(all_fflags)
+        
+        total_time = time.time() - start_time
+        
+        await status_msg.delete()
+        
+        response = f"## 📊 Combined FFlags Results\n\n"
+        response += f"**Files processed:** {files_processed}\n"
+        response += f"**Total flags before combining:** {total_flags}\n"
+        response += f"**Unique flags after combining:** {len(combined_fflags)}\n"
+        response += f"**⏱️ Time taken:** {FFlagChecker.format_time(total_time)}\n"
+        
+        await ctx.send(response)
+        
+        combined_file = FFlagChecker.create_json_file(combined_fflags, "combined")
+        await ctx.send(file=discord.File(combined_file, filename=f"combined_fflags.json"))
+        
+    except Exception as e:
+        await status_msg.edit(content=f"❌ Error: {str(e)}")
 
 async def main():
     if FLASK_AVAILABLE:
