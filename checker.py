@@ -283,7 +283,6 @@ async def combine_fflags(ctx):
     try:
         all_fflags = []
         files_processed = 0
-        total_flags = 0
         
         for attachment in ctx.message.attachments:
             if not attachment.filename.endswith(('.json', '.txt')):
@@ -296,7 +295,6 @@ async def combine_fflags(ctx):
             fflags_dict = FFlagChecker.parse_uploaded_file(file_text, attachment.filename)
             all_fflags.append(fflags_dict)
             files_processed += 1
-            total_flags += len(fflags_dict)
         
         if not all_fflags:
             await status_msg.edit(content="❌ No valid JSON or TXT files found to combine")
@@ -308,10 +306,8 @@ async def combine_fflags(ctx):
         
         await status_msg.delete()
         
-        response = f"## 📊 Combined FFlags Results\n\n"
+        response = f"## 📊 FFlag Results\n\n"
         response += f"**Files processed:** {files_processed}\n"
-        response += f"**Total flags before combining:** {total_flags}\n"
-        response += f"**Unique flags after combining:** {len(combined_fflags)}\n"
         response += f"**⏱️ Time taken:** {FFlagChecker.format_time(total_time)}\n"
         
         await ctx.send(response)
