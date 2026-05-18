@@ -18,6 +18,7 @@ intents.message_content = True
 bot = commands.Bot(command_prefix=PREFIX, intents=intents)
 
 FFLAGS_URL = "https://imtheo.lol/Offsets/FFlags.json"
+FFLAGS_HPP_URL = "https://imtheo.lol/Offsets/FFlags.hpp"
 
 # Try to import Flask, but don't fail if it's not available
 try:
@@ -52,6 +53,27 @@ class FFlagChecker:
                         raise Exception(f"Failed to fetch FFlags. Status code: {response.status}")
             except Exception as e:
                 raise Exception(f"Error fetching FFlags: {str(e)}")
+
+    @staticmethod
+    async def fetch_fflags_hpp() -> Tuple[str, int]:
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.get(FFLAGS_HPP_URL, timeout=10) as response:
+                    if response.status == 200:
+                        content = await response.text()
+                        total_offsets = FFlagChecker.extract_total_offsets(content)
+                        return content, total_offsets
+                    else:
+                        raise Exception(f"Failed to fetch FFlags.hpp. Status code: {response.status}")
+            except Exception as e:
+                raise Exception(f"Error fetching FFlags.hpp: {str(e)}")
+
+    @staticmethod
+    def extract_total_offsets(content: str) -> int:
+        match = re.search(r'Total Offsets\s+:\s+(\d+)', content)
+        if match:
+            return int(match.group(1))
+        return 0
 
     @staticmethod
     def parse_json_content(content: str) -> Dict:
@@ -162,6 +184,13 @@ class FFlagChecker:
         file_data = io.BytesIO()
         json_content = json.dumps(data, indent=4, ensure_ascii=False)
         file_data.write(json_content.encode('utf-8'))
+        file_data.seek(0)
+        return file_data
+
+    @staticmethod
+    def create_hpp_file(content: str) -> io.BytesIO:
+        file_data = io.BytesIO()
+        file_data.write(content.encode('utf-8'))
         file_data.seek(0)
         return file_data
 
@@ -564,6 +593,30 @@ async def fflag_injectors(ctx):
     view = InjectorSelectView(injectors)
     
     await ctx.send(embed=embed, view=view)
+
+@bot.command(name='fflagoffsets', aliases=['fflagoffset', 'offsets'])
+async def fflag_offsets(ctx):
+    status_msg = await ctx.send("🔄 Fetching FFlag offsets...")
+    start_time = time.time()
+    
+    try:
+        hpp_content, total_offsets = await FFlagChecker.fetch_fflags_hpp()
+        
+        total_time = time.time() - start_time
+        
+        await status_msg.delete()
+        
+        response = f"## 📊 FFlag Offsets Results\n\n"
+        response += f"**Total Offsets:** {total_offsets:,}\n"
+        response += f"**⏱️ Time taken:** {FFlagChecker.format_time(total_time)}\n"
+        
+        await ctx.send(response)
+        
+        hpp_file = FFlagChecker.create_hpp_file(hpp_content)
+        await ctx.send(file=discord.File(hpp_file, filename=f"fflag_offsets.hpp"))
+        
+    except Exception as e:
+        await status_msg.edit(content=f"❌ Error: {str(e)}")
 
 async def main():
     if FLASK_AVAILABLE:
