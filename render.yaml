@@ -1,7 +1,7 @@
 services:
   - type: web
     name: discord-fflag-bot
-    runtime: image
+    runtime: python
     repo: https://github.com/3r5wa3erfds4/fflag-checker
     plan: free
     envVars:
@@ -9,5 +9,4 @@ services:
         sync: false
     buildCommand: pip install -r requirements.txt
     startCommand: python bot.py
-    healthCheckPath: /
     autoDeploy: false
