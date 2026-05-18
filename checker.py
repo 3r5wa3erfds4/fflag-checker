@@ -191,7 +191,7 @@ async def check_fflags(ctx, *, json_content: str = None):
             await ctx.send("❌ Please upload a JSON or TXT file")
             return
         
-        status_msg = await ctx.send("🔄 Checking FFlags from file...")
+        status_msg = await ctx.send("🔄 Checking FFlags...")
         
         try:
             website_fflags = await FFlagChecker.fetch_fflags()
@@ -207,11 +207,17 @@ async def check_fflags(ctx, *, json_content: str = None):
             
             await status_msg.delete()
             
+            # Determine method based on file extension
+            if attachment.filename.lower().endswith('.json'):
+                method = "JSON File"
+            else:
+                method = "TXT File"
+            
             response = f"## 📊 FFlag Results\n\n"
-            response += f"**Source:** File upload `{attachment.filename}`\n"
-            response += f"**Total flags checked:** {len(local_fflags)}\n"
-            response += f"**✅ Valid flags:** {len(valid_fflags)}\n"
-            response += f"**❌ Invalid flags:** {len(invalid_fflags)}\n"
+            response += f"**Method:** {method}\n"
+            response += f"**Total FFlags:** {len(local_fflags)}\n"
+            response += f"**✅ Valid FFlags:** {len(valid_fflags)}\n"
+            response += f"**❌ Invalid FFlags:** {len(invalid_fflags)}\n"
             response += f"**⏱️ Time taken:** {FFlagChecker.format_time(total_time)}\n"
             
             await ctx.send(response)
@@ -232,7 +238,7 @@ async def check_fflags(ctx, *, json_content: str = None):
     
     # Method 2: Check if there's JSON in the message
     elif json_content:
-        status_msg = await ctx.send("🔄 Checking FFlags from message...")
+        status_msg = await ctx.send("🔄 Checking FFlags...")
         
         try:
             website_fflags = await FFlagChecker.fetch_fflags()
@@ -246,10 +252,10 @@ async def check_fflags(ctx, *, json_content: str = None):
             await status_msg.delete()
             
             response = f"## 📊 FFlag Results\n\n"
-            response += f"**Source:** Message\n"
-            response += f"**Total flags checked:** {len(local_fflags)}\n"
-            response += f"**✅ Valid flags:** {len(valid_fflags)}\n"
-            response += f"**❌ Invalid flags:** {len(invalid_fflags)}\n"
+            response += f"**Method:** In Message\n"
+            response += f"**Total FFlags:** {len(local_fflags)}\n"
+            response += f"**✅ Valid FFlags:** {len(valid_fflags)}\n"
+            response += f"**❌ Invalid FFlags:** {len(invalid_fflags)}\n"
             response += f"**⏱️ Time taken:** {FFlagChecker.format_time(total_time)}\n"
             
             await ctx.send(response)
@@ -277,7 +283,7 @@ async def combine_fflags(ctx):
         await ctx.send("❌ Please upload JSON or TXT files with the command.\nUsage: `!combinefflags` and attach multiple files")
         return
     
-    status_msg = await ctx.send("🔄 Combining FFlags from files...")
+    status_msg = await ctx.send("🔄 Combining FFlags...")
     start_time = time.time()
     
     try:
@@ -307,7 +313,8 @@ async def combine_fflags(ctx):
         await status_msg.delete()
         
         response = f"## 📊 FFlag Results\n\n"
-        response += f"**Files processed:** {files_processed}\n"
+        response += f"**Files:** {files_processed}\n"
+        response += f"**Total FFlags:** {len(combined_fflags)}\n"
         response += f"**⏱️ Time taken:** {FFlagChecker.format_time(total_time)}\n"
         
         await ctx.send(response)
