@@ -269,6 +269,10 @@ class InjectorSelectView(discord.ui.View):
         safe_status = "✅ Yes" if injector.get('safe_to_use', False) else "❌ No"
         embed.add_field(name="Safe To Use", value=safe_status, inline=True)
         
+        # Add official site only if available
+        if injector.get('official_site'):
+            embed.add_field(name="Official Site", value=f"[Click to Visit]({injector['official_site']})", inline=False)
+        
         # Add download links
         download_links = ""
         for name, url in injector['downloads'].items():
@@ -277,7 +281,8 @@ class InjectorSelectView(discord.ui.View):
             else:
                 download_links += f"• **{name}:** Not Available\n"
         
-        embed.add_field(name="Downloads", value=download_links, inline=False)
+        if download_links:
+            embed.add_field(name="Downloads", value=download_links, inline=False)
         
         # Add footer
         embed.set_footer(text=f"Select an injector from the dropdown menu above")
@@ -515,6 +520,33 @@ async def fflag_injectors(ctx):
             "downloads": {
                 "FFlag Injector (exe)": "https://github.com/Leitostrap/Leitostrap/releases/download/Leitostrap_V4.0.0/Leitostrap.exe",
                 "FFlag Injector (AHK)": "https://cdn.discordapp.com/attachments/1505268462313013341/1505273810939809862/Leitostrap.ahk?ex=6a0b587b&is=6a0a06fb&hm=690322f269671f40cdf16ec8a453743981cbb1ba4e1204158b6567c9731b6e7e&"
+            }
+        },
+        {
+            "name": "Injware",
+            "discord": "https://discord.gg/injware",
+            "products": ["FFlag Script (For Mobile)", "FFlag Injector (exe)"],
+            "updated_and_working": True,
+            "current_version": "2.3",
+            "paid": True,
+            "detection_status": "Undetected",
+            "safe_to_use": True,
+            "official_site": "https://getinjware.xyz/",
+            "downloads": {
+                "Go to official site to buy Injware": "https://getinjware.xyz/"
+            }
+        },
+        {
+            "name": "Davestrap",
+            "discord": "https://discord.gg/Fh9yf28J62",
+            "products": ["FFlag Injector (exe)"],
+            "updated_and_working": True,
+            "current_version": "3.0.5",
+            "paid": False,
+            "detection_status": "Undetected",
+            "safe_to_use": True,
+            "downloads": {
+                "FFlag Injector (exe)": "https://github.com/davelovestars/fflag-injector-new-version/releases/download/davestrapisback/fastflag_injector_gui_enhanced.exe"
             }
         }
     ]
