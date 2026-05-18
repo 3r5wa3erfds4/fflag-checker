@@ -396,7 +396,7 @@ async def check_fflags(ctx, *, json_content: str = None):
             else:
                 method = "TXT File"
             
-            response = f"## 📊 FFlag Results\n\n"
+            response = f"## ✅ FFlags Checked Successfully!\n\n"
             response += f"**Method:** {method}\n"
             response += f"**Total FFlags:** {len(local_fflags)}\n"
             response += f"**✅ Valid FFlags:** {len(valid_fflags)}\n"
@@ -434,7 +434,7 @@ async def check_fflags(ctx, *, json_content: str = None):
             
             await status_msg.delete()
             
-            response = f"## 📊 FFlag Results\n\n"
+            response = f"## ✅ FFlags Checked Successfully!\n\n"
             response += f"**Method:** In Message\n"
             response += f"**Total FFlags:** {len(local_fflags)}\n"
             response += f"**✅ Valid FFlags:** {len(valid_fflags)}\n"
@@ -495,7 +495,7 @@ async def combine_fflags(ctx):
         
         await status_msg.delete()
         
-        response = f"## 📊 FFlag Results\n\n"
+        response = f"## ✅ FFlags Combined Successfully!\n\n"
         response += f"**Files:** {files_processed}\n"
         response += f"**Total FFlags:** {len(combined_fflags)}\n"
         response += f"**⏱️ Time taken:** {FFlagChecker.format_time(total_time)}\n"
@@ -645,7 +645,7 @@ async def fflag_offsets(ctx):
         
         await status_msg.delete()
         
-        response = f"## 📊 FFlag Offsets Results\n\n"
+        response = f"## 📊 FFlag Offsets\n\n"
         response += f"**Roblox Version:** {roblox_version}\n"
         response += f"**Total Offsets:** {total_offsets:,}\n"
         response += f"**⏱️ Time taken:** {FFlagChecker.format_time(total_time)}\n"
