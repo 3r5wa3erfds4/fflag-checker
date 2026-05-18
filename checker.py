@@ -213,6 +213,61 @@ class PaginatorView(discord.ui.View):
         await interaction.message.delete()
         self.stop()
 
+class InjectorSelectView(discord.ui.View):
+    def __init__(self, injectors: List[Dict]):
+        super().__init__(timeout=None)
+        self.injectors = injectors
+        
+        # Create a select menu
+        select = discord.ui.Select(
+            placeholder="Select an FFlag Injector...",
+            options=[
+                discord.SelectOption(
+                    label=injector['name'],
+                    description=f"Version: {injector['current_version']}",
+                    value=str(i),
+                    emoji="💉"
+                ) for i, injector in enumerate(injectors)
+            ],
+            custom_id="injector_select"
+        )
+        select.callback = self.select_callback
+        self.add_item(select)
+    
+    async def select_callback(self, interaction: discord.Interaction):
+        selected_index = int(interaction.data["values"][0])
+        injector = self.injectors[selected_index]
+        
+        # Create embed for selected injector
+        embed = discord.Embed(
+            title=f"💉 {injector['name']}",
+            color=discord.Color.purple()
+        )
+        
+        # Add fields
+        embed.add_field(name="Discord", value=f"[Click to Join]({injector['discord']})", inline=False)
+        embed.add_field(name="Products", value="\n".join([f"• {product}" for product in injector['products']]), inline=False)
+        
+        # Updated status with emoji
+        updated_status = "✅ Yes" if injector['updated_and_working'] else "❌ No"
+        embed.add_field(name="Updated And Working", value=updated_status, inline=True)
+        embed.add_field(name="Current Version", value=injector['current_version'], inline=True)
+        
+        # Add download links
+        download_links = ""
+        for name, url in injector['downloads'].items():
+            if url:
+                download_links += f"• **{name}:** [Download]({url})\n"
+            else:
+                download_links += f"• **{name}:** Not Available\n"
+        
+        embed.add_field(name="Downloads", value=download_links, inline=False)
+        
+        # Add footer
+        embed.set_footer(text=f"Select an injector from the dropdown menu above")
+        
+        await interaction.response.edit_message(embed=embed, view=self)
+
 @bot.event
 async def on_ready():
     print(f'{bot.user} has connected to Discord!')
@@ -412,6 +467,50 @@ async def list_fflags(ctx):
         
     except Exception as e:
         await status_msg.edit(content=f"❌ Error: {str(e)}")
+
+@bot.command(name='fflaginjectors', aliases=['injectors', 'fflaginjector'])
+async def fflag_injectors(ctx):
+    # Define injectors data
+    injectors = [
+        {
+            "name": "Velostrap",
+            "discord": "https://discord.com/invite/4Gb4FYUQCm",
+            "products": ["FFlag Injector (exe)", "FFlag Injector (AHK)", "Bootstrapper (exe)"],
+            "updated_and_working": False,
+            "current_version": "1.0.0.0",
+            "downloads": {
+                "FFlag Injector (exe)": "https://cdn.discordapp.com/attachments/1496510448076329130/1502244748356751441/Velostrap.exe?ex=6a0b8832&is=6a0a36b2&hm=27104b8de0f4cd2e1d175790b8178c1888691691d677fc572f819a6e5866bf9e&",
+                "FFlag Injector (AHK)": "https://cdn.discordapp.com/attachments/1497578849053970514/1502569731196981289/VeloAHK.ahk?ex=6a0b655c&is=6a0a13dc&hm=4e7eb8b17cb11179bd72039c3fc6d9b1bb475c532c97052e19275bb9bf99125f&",
+                "Bootstrapper (exe)": "https://download2330.mediafire.com/xi6huu9xmsagNcBwGssKYUkFTG5M6XhVXoBjT6C5ZSbnVgt8UQwR24MPW5zq2eqquMi1EACNSaYp1kqzvZFmP48LEz2xSKeTAlKcxIlTC3PgV-TYnrTSKmiONh_u_xScjb_5-SU5Z32x5HF0oEVqsqbr6Tb1qO-FD4XPi7fQoMCTfA/u4m3hafb7jj0cq5/Velostrap.exe"
+            }
+        },
+        {
+            "name": "Leitostrap",
+            "discord": "https://discord.gg/cQGsgkatyh",
+            "products": ["FFlag Injector (exe)", "FFlag Injector (AHK)"],
+            "updated_and_working": True,
+            "current_version": "V4.0.0",
+            "downloads": {
+                "FFlag Injector (exe)": "https://github.com/Leitostrap/Leitostrap/releases/download/Leitostrap_V4.0.0/Leitostrap.exe",
+                "FFlag Injector (AHK)": "https://cdn.discordapp.com/attachments/1505268462313013341/1505273810939809862/Leitostrap.ahk?ex=6a0b587b&is=6a0a06fb&hm=690322f269671f40cdf16ec8a453743981cbb1ba4e1204158b6567c9731b6e7e&",
+                "Bootstrapper (exe)": None
+            }
+        }
+    ]
+    
+    # Create initial embed with dropdown menu
+    embed = discord.Embed(
+        title="💉 FFlag Injectors",
+        description="Select an injector from the dropdown menu below to view details and download links.",
+        color=discord.Color.purple()
+    )
+    embed.add_field(name="Total Injectors", value=str(len(injectors)), inline=True)
+    embed.add_field(name="How to Use", value="1. Select an injector from the dropdown\n2. View all information and download links\n3. Click the download links to get the files", inline=False)
+    embed.set_footer(text="FFlag Injector Database")
+    
+    view = InjectorSelectView(injectors)
+    
+    await ctx.send(embed=embed, view=view)
 
 async def main():
     if FLASK_AVAILABLE:
