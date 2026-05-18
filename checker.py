@@ -174,6 +174,45 @@ class FFlagChecker:
         else:
             return f"{seconds:.2f}s"
 
+class PaginatorView(discord.ui.View):
+    def __init__(self, pages: List[str], total_fflags: int, current_page: int = 0):
+        super().__init__(timeout=None)
+        self.pages = pages
+        self.total_fflags = total_fflags
+        self.current_page = current_page
+        self.total_pages = len(pages)
+    
+    async def update_message(self, interaction: discord.Interaction):
+        embed = discord.Embed(
+            title="📋 All FFlags",
+            description=self.pages[self.current_page],
+            color=discord.Color.blue()
+        )
+        embed.set_footer(text=f"Page {self.current_page + 1}/{self.total_pages} | Total FFlags: {self.total_fflags}")
+        
+        # Update button states
+        self.previous_page_button.disabled = self.current_page == 0
+        self.next_page_button.disabled = self.current_page == self.total_pages - 1
+        
+        await interaction.response.edit_message(embed=embed, view=self)
+    
+    @discord.ui.button(label="◀ Previous", style=discord.ButtonStyle.primary, custom_id="fflag_prev")
+    async def previous_page_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.current_page > 0:
+            self.current_page -= 1
+            await self.update_message(interaction)
+    
+    @discord.ui.button(label="Next ▶", style=discord.ButtonStyle.primary, custom_id="fflag_next")
+    async def next_page_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.current_page < self.total_pages - 1:
+            self.current_page += 1
+            await self.update_message(interaction)
+    
+    @discord.ui.button(label="❌ Close", style=discord.ButtonStyle.danger, custom_id="fflag_close")
+    async def close_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.message.delete()
+        self.stop()
+
 @bot.event
 async def on_ready():
     print(f'{bot.user} has connected to Discord!')
@@ -321,6 +360,55 @@ async def combine_fflags(ctx):
         
         combined_file = FFlagChecker.create_json_file(combined_fflags, "combined")
         await ctx.send(file=discord.File(combined_file, filename=f"combined_fflags.json"))
+        
+    except Exception as e:
+        await status_msg.edit(content=f"❌ Error: {str(e)}")
+
+@bot.command(name='listfflags', aliases=['listflags', 'fflagslist'])
+async def list_fflags(ctx):
+    status_msg = await ctx.send("🔄 Fetching FFlags list...")
+    
+    try:
+        website_fflags = await FFlagChecker.fetch_fflags()
+        
+        if not website_fflags:
+            await status_msg.edit(content="❌ No FFlags found or failed to fetch")
+            return
+        
+        # Sort FFlags alphabetically
+        sorted_fflags = sorted(website_fflags.keys())
+        total_fflags = len(sorted_fflags)
+        
+        # Create pages with 30 FFlags per page
+        fflags_per_page = 30
+        pages = []
+        
+        for i in range(0, total_fflags, fflags_per_page):
+            page_fflags = sorted_fflags[i:i + fflags_per_page]
+            page_content = "```\n"
+            for idx, flag in enumerate(page_fflags, start=i + 1):
+                page_content += f"{idx:4}. {flag}\n"
+            page_content += "```"
+            pages.append(page_content)
+        
+        await status_msg.delete()
+        
+        # Create initial embed
+        embed = discord.Embed(
+            title="📋 All FFlags",
+            description=pages[0],
+            color=discord.Color.blue()
+        )
+        embed.set_footer(text=f"Page 1/{len(pages)} | Total FFlags: {total_fflags}")
+        
+        # Create paginator view with no timeout
+        view = PaginatorView(pages, total_fflags, 0)
+        
+        # Update button states for first page
+        view.previous_page_button.disabled = True
+        view.next_page_button.disabled = len(pages) == 1
+        
+        await ctx.send(embed=embed, view=view)
         
     except Exception as e:
         await status_msg.edit(content=f"❌ Error: {str(e)}")
