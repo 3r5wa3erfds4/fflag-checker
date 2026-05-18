@@ -55,14 +55,16 @@ class FFlagChecker:
                 raise Exception(f"Error fetching FFlags: {str(e)}")
 
     @staticmethod
-    async def fetch_fflags_hpp() -> Tuple[str, int]:
+    async def fetch_fflags_hpp() -> Tuple[str, int, str]:
         async with aiohttp.ClientSession() as session:
             try:
                 async with session.get(FFLAGS_HPP_URL, timeout=10) as response:
                     if response.status == 200:
                         content = await response.text()
                         total_offsets = FFlagChecker.extract_total_offsets(content)
-                        return content, total_offsets
+                        roblox_version = FFlagChecker.extract_roblox_version(content)
+                        cleaned_content = FFlagChecker.clean_hpp_content(content)
+                        return cleaned_content, total_offsets, roblox_version
                     else:
                         raise Exception(f"Failed to fetch FFlags.hpp. Status code: {response.status}")
             except Exception as e:
@@ -74,6 +76,43 @@ class FFlagChecker:
         if match:
             return int(match.group(1))
         return 0
+
+    @staticmethod
+    def extract_roblox_version(content: str) -> str:
+        match = re.search(r'Roblox Version\s+:\s+([^\n]+)', content)
+        if match:
+            return match.group(1).strip()
+        return "Unknown"
+
+    @staticmethod
+    def clean_hpp_content(content: str) -> str:
+        lines = content.split('\n')
+        cleaned_lines = []
+        
+        # Flag to track if we're inside the FFlags namespace
+        in_fflags_section = False
+        
+        for line in lines:
+            # Check for FFlags namespace start
+            if 'namespace FFlags {' in line:
+                in_fflags_section = True
+                continue
+            
+            # Check for end of FFlags namespace
+            if in_fflags_section and ('}' in line and 'namespace FFlags' not in line):
+                in_fflags_section = False
+                continue
+            
+            # Process lines within FFlags namespace
+            if in_fflags_section:
+                # Match pattern: inline constexpr uintptr_t FlagName = 0x12345678;
+                match = re.search(r'inline constexpr uintptr_t (\w+)\s*=\s*(0x[0-9a-fA-F]+);', line)
+                if match:
+                    flag_name = match.group(1)
+                    offset = match.group(2)
+                    cleaned_lines.append(f"{flag_name} = {offset}")
+        
+        return '\n'.join(cleaned_lines)
 
     @staticmethod
     def parse_json_content(content: str) -> Dict:
@@ -600,19 +639,20 @@ async def fflag_offsets(ctx):
     start_time = time.time()
     
     try:
-        hpp_content, total_offsets = await FFlagChecker.fetch_fflags_hpp()
+        cleaned_content, total_offsets, roblox_version = await FFlagChecker.fetch_fflags_hpp()
         
         total_time = time.time() - start_time
         
         await status_msg.delete()
         
         response = f"## 📊 FFlag Offsets Results\n\n"
+        response += f"**Roblox Version:** {roblox_version}\n"
         response += f"**Total Offsets:** {total_offsets:,}\n"
         response += f"**⏱️ Time taken:** {FFlagChecker.format_time(total_time)}\n"
         
         await ctx.send(response)
         
-        hpp_file = FFlagChecker.create_hpp_file(hpp_content)
+        hpp_file = FFlagChecker.create_hpp_file(cleaned_content)
         await ctx.send(file=discord.File(hpp_file, filename=f"fflag_offsets.hpp"))
         
     except Exception as e:
