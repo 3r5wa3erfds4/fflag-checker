@@ -492,8 +492,7 @@ async def fflag_injectors(ctx):
             "current_version": "V4.0.0",
             "downloads": {
                 "FFlag Injector (exe)": "https://github.com/Leitostrap/Leitostrap/releases/download/Leitostrap_V4.0.0/Leitostrap.exe",
-                "FFlag Injector (AHK)": "https://cdn.discordapp.com/attachments/1505268462313013341/1505273810939809862/Leitostrap.ahk?ex=6a0b587b&is=6a0a06fb&hm=690322f269671f40cdf16ec8a453743981cbb1ba4e1204158b6567c9731b6e7e&",
-                "Bootstrapper (exe)": None
+                "FFlag Injector (AHK)": "https://cdn.discordapp.com/attachments/1505268462313013341/1505273810939809862/Leitostrap.ahk?ex=6a0b587b&is=6a0a06fb&hm=690322f269671f40cdf16ec8a453743981cbb1ba4e1204158b6567c9731b6e7e&"
             }
         }
     ]
