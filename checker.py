@@ -253,6 +253,22 @@ class InjectorSelectView(discord.ui.View):
         embed.add_field(name="Updated And Working", value=updated_status, inline=True)
         embed.add_field(name="Current Version", value=injector['current_version'], inline=True)
         
+        # Add new fields
+        paid_status = "✅ Yes" if injector.get('paid', False) else "❌ No"
+        embed.add_field(name="Paid", value=paid_status, inline=True)
+        
+        detection_status = injector.get('detection_status', 'Unknown')
+        if detection_status.lower() == 'undetected':
+            detection_display = "✅ Undetected"
+        elif detection_status.lower() == 'detected':
+            detection_display = "❌ Detected"
+        else:
+            detection_display = detection_status
+        embed.add_field(name="Detection Status", value=detection_display, inline=True)
+        
+        safe_status = "✅ Yes" if injector.get('safe_to_use', False) else "❌ No"
+        embed.add_field(name="Safe To Use", value=safe_status, inline=True)
+        
         # Add download links
         download_links = ""
         for name, url in injector['downloads'].items():
@@ -478,6 +494,9 @@ async def fflag_injectors(ctx):
             "products": ["FFlag Injector (exe)", "FFlag Injector (AHK)", "Bootstrapper (exe)"],
             "updated_and_working": False,
             "current_version": "1.0.0.0",
+            "paid": False,
+            "detection_status": "Undetected",
+            "safe_to_use": True,
             "downloads": {
                 "FFlag Injector (exe)": "https://cdn.discordapp.com/attachments/1496510448076329130/1502244748356751441/Velostrap.exe?ex=6a0b8832&is=6a0a36b2&hm=27104b8de0f4cd2e1d175790b8178c1888691691d677fc572f819a6e5866bf9e&",
                 "FFlag Injector (AHK)": "https://cdn.discordapp.com/attachments/1497578849053970514/1502569731196981289/VeloAHK.ahk?ex=6a0b655c&is=6a0a13dc&hm=4e7eb8b17cb11179bd72039c3fc6d9b1bb475c532c97052e19275bb9bf99125f&",
@@ -490,6 +509,9 @@ async def fflag_injectors(ctx):
             "products": ["FFlag Injector (exe)", "FFlag Injector (AHK)"],
             "updated_and_working": True,
             "current_version": "V4.0.0",
+            "paid": False,
+            "detection_status": "Undetected",
+            "safe_to_use": True,
             "downloads": {
                 "FFlag Injector (exe)": "https://github.com/Leitostrap/Leitostrap/releases/download/Leitostrap_V4.0.0/Leitostrap.exe",
                 "FFlag Injector (AHK)": "https://cdn.discordapp.com/attachments/1505268462313013341/1505273810939809862/Leitostrap.ahk?ex=6a0b587b&is=6a0a06fb&hm=690322f269671f40cdf16ec8a453743981cbb1ba4e1204158b6567c9731b6e7e&"
