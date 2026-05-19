@@ -347,7 +347,7 @@ class InjectorSelectView(discord.ui.View):
             if url:
                 download_links += f"• **{name}:** [Download]({url})\n"
             else:
-                download_links += f"• **{name}:** Not Available\n"
+                download_links += f"• **{name}:** {url}\n"
         
         if download_links:
             embed.add_field(name="Downloads", value=download_links, inline=False)
@@ -579,7 +579,7 @@ async def fflag_injectors(ctx):
         {
             "name": "Leitostrap",
             "discord": "https://discord.gg/cQGsgkatyh",
-            "products": ["FFlag Injector (exe)", "FFlag Injector (AHK)"],
+            "products": ["FFlag Injector (exe)", "FFlag Injector (AHK)", "Bootstrapper (exe)"],
             "updated_and_working": True,
             "current_version": "V4.0.0",
             "paid": False,
@@ -587,7 +587,8 @@ async def fflag_injectors(ctx):
             "safe_to_use": True,
             "downloads": {
                 "FFlag Injector (exe)": "https://github.com/Leitostrap/Leitostrap/releases/download/Leitostrap_V4.0.0/Leitostrap.exe",
-                "FFlag Injector (AHK)": "https://cdn.discordapp.com/attachments/1505268462313013341/1505273810939809862/Leitostrap.ahk?ex=6a0b587b&is=6a0a06fb&hm=690322f269671f40cdf16ec8a453743981cbb1ba4e1204158b6567c9731b6e7e&"
+                "FFlag Injector (AHK)": "https://cdn.discordapp.com/attachments/1505268462313013341/1505273810939809862/Leitostrap.ahk?ex=6a0b587b&is=6a0a06fb&hm=690322f269671f40cdf16ec8a453743981cbb1ba4e1204158b6567c9731b6e7e&",
+                "Bootstrapper (exe)": "Unreleased (will be released soon)"
             }
         },
         {
