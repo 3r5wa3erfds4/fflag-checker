@@ -312,6 +312,10 @@ class InjectorSelectView(discord.ui.View):
             color=discord.Color.purple()
         )
         
+        # Set thumbnail if available
+        if injector.get('icon_url'):
+            embed.set_thumbnail(url=injector['icon_url'])
+        
         # Add fields
         embed.add_field(name="Discord", value=f"[Click to Join]({injector['discord']})", inline=False)
         embed.add_field(name="Products", value="\n".join([f"• {product}" for product in injector['products']]), inline=False)
@@ -559,7 +563,7 @@ async def list_fflags(ctx):
 
 @bot.command(name='fflaginjectors', aliases=['injectors', 'fflaginjector'])
 async def fflag_injectors(ctx):
-    # Define injectors data
+    # Define injectors data with permanent icon URLs
     injectors = [
         {
             "name": "Velostrap",
@@ -570,6 +574,7 @@ async def fflag_injectors(ctx):
             "paid": False,
             "detection_status": "Undetected",
             "safe_to_use": True,
+            "icon_url": "https://i.ibb.co/gMjp3GjN/Velostrap-Icon.webp",
             "downloads": {
                 "FFlag Injector (exe)": "https://cdn.discordapp.com/attachments/1496510448076329130/1502244748356751441/Velostrap.exe?ex=6a0b8832&is=6a0a36b2&hm=27104b8de0f4cd2e1d175790b8178c1888691691d677fc572f819a6e5866bf9e&",
                 "FFlag Injector (AHK)": "https://cdn.discordapp.com/attachments/1497578849053970514/1502569731196981289/VeloAHK.ahk?ex=6a0b655c&is=6a0a13dc&hm=4e7eb8b17cb11179bd72039c3fc6d9b1bb475c532c97052e19275bb9bf99125f&",
@@ -585,6 +590,7 @@ async def fflag_injectors(ctx):
             "paid": False,
             "detection_status": "Undetected",
             "safe_to_use": True,
+            "icon_url": "https://i.ibb.co/ym8NFKnr/Leitostrap-Icon.webp",
             "downloads": {
                 "FFlag Injector (exe)": "https://github.com/Leitostrap/Leitostrap/releases/download/Leitostrap_V4.0.0/Leitostrap.exe",
                 "FFlag Injector (AHK)": "https://cdn.discordapp.com/attachments/1505268462313013341/1505273810939809862/Leitostrap.ahk?ex=6a0b587b&is=6a0a06fb&hm=690322f269671f40cdf16ec8a453743981cbb1ba4e1204158b6567c9731b6e7e&",
@@ -601,6 +607,7 @@ async def fflag_injectors(ctx):
             "detection_status": "Undetected",
             "safe_to_use": True,
             "official_site": "https://getinjware.xyz/",
+            "icon_url": "https://i.ibb.co/C59t9584/Injware-Icon.webp",
             "downloads": {
                 "Go to official site to buy Injware": "https://getinjware.xyz/"
             }
@@ -614,6 +621,7 @@ async def fflag_injectors(ctx):
             "paid": False,
             "detection_status": "Undetected",
             "safe_to_use": True,
+            "icon_url": "https://i.ibb.co/m5F4L8jm/Davestrap-Icon.png",
             "downloads": {
                 "FFlag Injector (exe)": "https://github.com/davelovestars/fflag-injector-new-version/releases/download/davestrapisback/fastflag_injector_gui_enhanced.exe"
             }
