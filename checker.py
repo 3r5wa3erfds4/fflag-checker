@@ -344,7 +344,7 @@ class InjectorSelectView(discord.ui.View):
         # Add download links
         download_links = ""
         for name, url in injector['downloads'].items():
-            if url:
+            if url and url.startswith('http'):
                 download_links += f"• **{name}:** [Download]({url})\n"
             else:
                 download_links += f"• **{name}:** {url}\n"
@@ -588,7 +588,7 @@ async def fflag_injectors(ctx):
             "downloads": {
                 "FFlag Injector (exe)": "https://github.com/Leitostrap/Leitostrap/releases/download/Leitostrap_V4.0.0/Leitostrap.exe",
                 "FFlag Injector (AHK)": "https://cdn.discordapp.com/attachments/1505268462313013341/1505273810939809862/Leitostrap.ahk?ex=6a0b587b&is=6a0a06fb&hm=690322f269671f40cdf16ec8a453743981cbb1ba4e1204158b6567c9731b6e7e&",
-                "Bootstrapper (exe)": "Unreleased (will be released soon)"
+                "Bootstrapper (exe)": "https://download947.mediafire.com/8qbujswfgb3gl7RqTWfyu7gTkVM8EdPvVlJq2KPzYxtmaW5cXtf5hbPeU8JMtgU7O5J7m2fHDTvr71MD4ffx8gGz2_PSI29OrKH8Cx3BOP7Em3Z3mkcFB-RMUSlc1_HJhIBVZl0Zkc0ZiWVR0PXNumjogm2BvKB8WqAd8sbCkyejHw/jnkcj7m0v1ec0ht/Leitostrap.exe"
             }
         },
         {
