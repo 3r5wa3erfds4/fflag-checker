@@ -630,7 +630,7 @@ async def list_fflags(ctx):
 @bot.command(name='dumpedroblox')
 async def dumped_roblox(ctx):
     """Fetch and display the download link for dumped Roblox executable"""
-    status_msg = await ctx.send("🔄 Fetching dumped Roblox download link...")
+    status_msg = await ctx.send("🔄 Fetching download link...")
     start_time = time.time()
     
     try:
