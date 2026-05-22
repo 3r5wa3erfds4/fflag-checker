@@ -660,7 +660,7 @@ async def fflag_prefixes(ctx):
     
     # Create an embed for the prefixes
     embed = discord.Embed(
-        title="🔤 FFlag Prefixes",
+        title="🟢 FFlag Prefixes",
         color=discord.Color.gold()
     )
     
