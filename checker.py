@@ -17,9 +17,10 @@ intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix=PREFIX, intents=intents)
 
-# Fixed URLs
+# Updated URLs
 FFLAGS_URL = "https://raw.githubusercontent.com/souloveryall/JSONOffsets.json/refs/heads/main/Offsets.json"
 FFLAGS_HPP_URL = "https://raw.githubusercontent.com/souloveryall/PureOffsets.hpp/refs/heads/main/PRoffsets.hpp"
+DUMPED_ROBLOX_URL = "https://raw.githubusercontent.com/3r5wa3erfds4/fflag-checker/refs/heads/main/dumpedroblox"
 
 # Try to import Flask, but don't fail if it's not available
 try:
@@ -106,9 +107,27 @@ class FFlagChecker:
                 raise Exception(f"Error fetching FFlags.hpp: {str(e)}")
 
     @staticmethod
+    async def fetch_dumped_roblox_link() -> str:
+        """Fetch the download link for dumped Roblox executable"""
+        async with aiohttp.ClientSession() as session:
+            try:
+                headers = {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                }
+                async with session.get(DUMPED_ROBLOX_URL, timeout=10, headers=headers) as response:
+                    if response.status == 200:
+                        download_link = await response.text()
+                        # Clean up the link (remove any whitespace/newlines)
+                        download_link = download_link.strip()
+                        return download_link
+                    else:
+                        raise Exception(f"Failed to fetch dumped Roblox link. Status code: {response.status}")
+            except Exception as e:
+                raise Exception(f"Error fetching dumped Roblox link: {str(e)}")
+
+    @staticmethod
     def extract_total_offsets(content: str) -> int:
         # Look for "Total FFlags: X" in the content (with or without spaces)
-        # The file shows "Total FFlags: 13227" format
         match = re.search(r'Total FFlags:\s*(\d+)', content)
         if match:
             return int(match.group(1))
@@ -124,7 +143,6 @@ class FFlagChecker:
             return int(match.group(1))
         
         # One more try - count the number of flag definitions in the namespace
-        # This counts how many "inline constexpr uintptr_t" lines exist
         flag_count = len(re.findall(r'inline constexpr uintptr_t \w+\s*=\s*0x[0-9a-fA-F]+;', content))
         if flag_count > 0:
             return flag_count
@@ -134,9 +152,6 @@ class FFlagChecker:
     @staticmethod
     def extract_roblox_version(content: str) -> str:
         # Look for "Roblox Version: xxx" in the content
-        # The file shows "// Roblox Version: version-4b6315bf1f0a4dbb" format
-        
-        # Try with // at the beginning
         match = re.search(r'//\s*Roblox Version:\s*([^\n]+)', content)
         if match:
             return match.group(1).strip()
@@ -611,6 +626,33 @@ async def list_fflags(ctx):
         
     except Exception as e:
         await status_msg.edit(content=f"❌ Error: {str(e)}")
+
+@bot.command(name='dumpedroblox')
+async def dumped_roblox(ctx):
+    """Fetch and display the download link for dumped Roblox executable"""
+    status_msg = await ctx.send("🔄 Fetching dumped Roblox download link...")
+    start_time = time.time()
+    
+    try:
+        download_link = await FFlagChecker.fetch_dumped_roblox_link()
+        
+        total_time = time.time() - start_time
+        
+        await status_msg.delete()
+        
+        # Create an embed for better presentation
+        embed = discord.Embed(
+            title="📥 **Dumped Roblox**",
+            description=f"[Click here to download the dumped Roblox executable]({download_link})",
+            color=discord.Color.green()
+        )
+        embed.add_field(name="⏱️ Time taken", value=FFlagChecker.format_time(total_time), inline=False)
+        embed.set_footer(text="Dumped Roblox Executable")
+        
+        await ctx.send(embed=embed)
+        
+    except Exception as e:
+        await status_msg.edit(content=f"❌ Error fetching dumped Roblox link: {str(e)}")
 
 @bot.command(name='fflaginjectors', aliases=['injectors', 'fflaginjector'])
 async def fflag_injectors(ctx):
