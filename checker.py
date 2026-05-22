@@ -17,8 +17,9 @@ intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix=PREFIX, intents=intents)
 
-FFLAGS_URL = "https://imtheo.lol/Offsets/FFlags.json"
-FFLAGS_HPP_URL = "https://imtheo.lol/Offsets/FFlags.hpp"
+# Updated URLs
+FFLAGS_URL = "https://raw.githubusercontent.com/souloveryall/JSONOffsets.json/refs/heads/main/Offsets.json"
+FFLAGS_HPP_URL = "https://raw.githubusercontent.com/souloveryall/PureOffsets.hpp/refs/heads/main/PRoffsets.hpp"
 
 # Try to import Flask, but don't fail if it's not available
 try:
@@ -47,8 +48,14 @@ class FFlagChecker:
                 async with session.get(FFLAGS_URL, timeout=10) as response:
                     if response.status == 200:
                         data = await response.json()
-                        fflags = data.get("FFlagOffsets", {}).get("FFlags", {})
-                        return fflags
+                        # The new JSON format has the offsets directly in the root object
+                        # with flags as keys and offsets as values
+                        if isinstance(data, dict):
+                            # Remove any comment lines if they exist (they start with //)
+                            filtered_data = {k: v for k, v in data.items() if not k.startswith('//')}
+                            return filtered_data
+                        else:
+                            raise Exception("JSON format not recognized")
                     else:
                         raise Exception(f"Failed to fetch FFlags. Status code: {response.status}")
             except Exception as e:
@@ -72,6 +79,11 @@ class FFlagChecker:
 
     @staticmethod
     def extract_total_offsets(content: str) -> int:
+        # Try to find "Total FFlags: X" format first (new format)
+        match = re.search(r'Total FFlags\s+:\s+(\d+)', content)
+        if match:
+            return int(match.group(1))
+        # Fall back to old format
         match = re.search(r'Total Offsets\s+:\s+(\d+)', content)
         if match:
             return int(match.group(1))
@@ -79,6 +91,11 @@ class FFlagChecker:
 
     @staticmethod
     def extract_roblox_version(content: str) -> str:
+        # Try to find "Roblox Version: xxx" format first (new format)
+        match = re.search(r'Roblox Version:\s*([^\n]+)', content)
+        if match:
+            return match.group(1).strip()
+        # Fall back to old format
         match = re.search(r'Roblox Version\s+:\s+([^\n]+)', content)
         if match:
             return match.group(1).strip()
@@ -119,7 +136,8 @@ class FFlagChecker:
         try:
             data = json.loads(content)
             if isinstance(data, dict):
-                return data
+                # Remove any comment keys if they exist
+                return {k: v for k, v in data.items() if not k.startswith('//')}
             elif isinstance(data, list):
                 return {flag: "" for flag in data}
             else:
@@ -133,7 +151,8 @@ class FFlagChecker:
             if filename.lower().endswith('.json'):
                 data = json.loads(content)
                 if isinstance(data, dict):
-                    return data
+                    # Remove any comment keys if they exist
+                    return {k: v for k, v in data.items() if not k.startswith('//')}
                 elif isinstance(data, list):
                     return {flag: "" for flag in data}
                 else:
@@ -142,7 +161,7 @@ class FFlagChecker:
                 try:
                     data = json.loads(content)
                     if isinstance(data, dict):
-                        return data
+                        return {k: v for k, v in data.items() if not k.startswith('//')}
                     elif isinstance(data, list):
                         return {flag: "" for flag in data}
                 except json.JSONDecodeError:
@@ -151,7 +170,7 @@ class FFlagChecker:
                 result = {}
                 for line in content.split('\n'):
                     line = line.strip()
-                    if line and not line.startswith('#'):
+                    if line and not line.startswith('#') and not line.startswith('//'):
                         if '=' in line:
                             parts = line.split('=', 1)
                             flag = parts[0].strip()
@@ -172,7 +191,7 @@ class FFlagChecker:
             raise Exception(f"Error parsing file: {str(e)}")
 
     @staticmethod
-    def compare_fflags(local_fflags: Dict, website_fflags: Dict[str, int]) -> Tuple[Dict, Dict]:
+    def compare_fflags(local_fflags: Dict, website_fflags: Dict[str, str]) -> Tuple[Dict, Dict]:
         valid_fflags = {}
         invalid_fflags = {}
         
