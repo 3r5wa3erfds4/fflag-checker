@@ -693,7 +693,7 @@ async def fflag_prefixes(ctx):
     )
     
     embed.add_field(name="**What The FFlag Prefixes Are**", value=prefix_meanings, inline=False)
-    embed.set_footer(text="FFlag Prefix Reference")
+    embed.set_footer(text="FFlag Prefixes")
     
     await ctx.send(embed=embed)
 
