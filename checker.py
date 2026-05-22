@@ -17,7 +17,7 @@ intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix=PREFIX, intents=intents)
 
-# Fixed URLs - corrected the username from "souloverall" to "souloveryall"
+# Fixed URLs
 FFLAGS_URL = "https://raw.githubusercontent.com/souloveryall/JSONOffsets.json/refs/heads/main/Offsets.json"
 FFLAGS_HPP_URL = "https://raw.githubusercontent.com/souloveryall/PureOffsets.hpp/refs/heads/main/PRoffsets.hpp"
 
@@ -45,22 +45,18 @@ class FFlagChecker:
     async def fetch_fflags() -> Dict:
         async with aiohttp.ClientSession() as session:
             try:
-                # Add headers to request JSON content
                 headers = {
                     'Accept': 'application/json, text/plain, */*',
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
                 }
                 async with session.get(FFLAGS_URL, timeout=10, headers=headers) as response:
                     if response.status == 200:
-                        # Get the text content first
                         text_content = await response.text()
                         
-                        # Try to parse as JSON
                         try:
                             data = json.loads(text_content)
                         except json.JSONDecodeError:
                             # If direct parsing fails, try to extract JSON from the text
-                            # The file might have comments at the top (// lines)
                             lines = text_content.split('\n')
                             json_lines = []
                             in_json = False
@@ -75,16 +71,12 @@ class FFlagChecker:
                                     if stripped.endswith('}'):
                                         break
                                 elif stripped.startswith('//'):
-                                    # Skip comment lines
                                     continue
                             
                             json_text = '\n'.join(json_lines)
                             data = json.loads(json_text)
                         
-                        # The new JSON format has the offsets directly in the root object
-                        # with flags as keys and offsets as values
                         if isinstance(data, dict):
-                            # Remove any comment keys if they exist (they start with //)
                             filtered_data = {k: v for k, v in data.items() if not k.startswith('//')}
                             return filtered_data
                         else:
@@ -115,26 +107,50 @@ class FFlagChecker:
 
     @staticmethod
     def extract_total_offsets(content: str) -> int:
-        # Try to find "Total FFlags: X" format first (new format)
+        # Look for "Total FFlags: X" in the content (with or without spaces)
+        # The file shows "Total FFlags: 13227" format
+        match = re.search(r'Total FFlags:\s*(\d+)', content)
+        if match:
+            return int(match.group(1))
+        
+        # Also try with spaces around colon
         match = re.search(r'Total FFlags\s+:\s+(\d+)', content)
         if match:
             return int(match.group(1))
+        
         # Fall back to old format
         match = re.search(r'Total Offsets\s+:\s+(\d+)', content)
         if match:
             return int(match.group(1))
+        
+        # One more try - count the number of flag definitions in the namespace
+        # This counts how many "inline constexpr uintptr_t" lines exist
+        flag_count = len(re.findall(r'inline constexpr uintptr_t \w+\s*=\s*0x[0-9a-fA-F]+;', content))
+        if flag_count > 0:
+            return flag_count
+        
         return 0
 
     @staticmethod
     def extract_roblox_version(content: str) -> str:
-        # Try to find "Roblox Version: xxx" format first (new format)
+        # Look for "Roblox Version: xxx" in the content
+        # The file shows "// Roblox Version: version-4b6315bf1f0a4dbb" format
+        
+        # Try with // at the beginning
+        match = re.search(r'//\s*Roblox Version:\s*([^\n]+)', content)
+        if match:
+            return match.group(1).strip()
+        
+        # Try without //
         match = re.search(r'Roblox Version:\s*([^\n]+)', content)
         if match:
             return match.group(1).strip()
-        # Fall back to old format
+        
+        # Try with spaces around colon
         match = re.search(r'Roblox Version\s+:\s+([^\n]+)', content)
         if match:
             return match.group(1).strip()
+        
         return "Unknown"
 
     @staticmethod
@@ -172,7 +188,6 @@ class FFlagChecker:
         try:
             data = json.loads(content)
             if isinstance(data, dict):
-                # Remove any comment keys if they exist
                 return {k: v for k, v in data.items() if not k.startswith('//')}
             elif isinstance(data, list):
                 return {flag: "" for flag in data}
@@ -187,7 +202,6 @@ class FFlagChecker:
             if filename.lower().endswith('.json'):
                 data = json.loads(content)
                 if isinstance(data, dict):
-                    # Remove any comment keys if they exist
                     return {k: v for k, v in data.items() if not k.startswith('//')}
                 elif isinstance(data, list):
                     return {flag: "" for flag in data}
@@ -313,7 +327,6 @@ class PaginatorView(discord.ui.View):
         )
         embed.set_footer(text=f"Page {self.current_page + 1}/{self.total_pages} | Total FFlags: {self.total_fflags}")
         
-        # Update button states
         self.previous_page_button.disabled = self.current_page == 0
         self.next_page_button.disabled = self.current_page == self.total_pages - 1
         
@@ -341,7 +354,6 @@ class InjectorSelectView(discord.ui.View):
         super().__init__(timeout=None)
         self.injectors = injectors
         
-        # Create a select menu
         select = discord.ui.Select(
             placeholder="Select an FFlag Injector...",
             options=[
@@ -361,26 +373,21 @@ class InjectorSelectView(discord.ui.View):
         selected_index = int(interaction.data["values"][0])
         injector = self.injectors[selected_index]
         
-        # Create embed for selected injector
         embed = discord.Embed(
             title=f"💉 {injector['name']}",
             color=discord.Color.purple()
         )
         
-        # Set thumbnail if available
         if injector.get('icon_url'):
             embed.set_thumbnail(url=injector['icon_url'])
         
-        # Add fields
         embed.add_field(name="Discord", value=f"[Click to Join]({injector['discord']})", inline=False)
         embed.add_field(name="Products", value="\n".join([f"• {product}" for product in injector['products']]), inline=False)
         
-        # Updated status with emoji
         updated_status = "✅ Yes" if injector['updated_and_working'] else "❌ No"
         embed.add_field(name="Updated And Working", value=updated_status, inline=True)
         embed.add_field(name="Current Version", value=injector['current_version'], inline=True)
         
-        # Add new fields
         paid_status = "✅ Yes" if injector.get('paid', False) else "❌ No"
         embed.add_field(name="Paid", value=paid_status, inline=True)
         
@@ -396,11 +403,9 @@ class InjectorSelectView(discord.ui.View):
         safe_status = "✅ Yes" if injector.get('safe_to_use', False) else "❌ No"
         embed.add_field(name="Safe To Use", value=safe_status, inline=True)
         
-        # Add official site only if available
         if injector.get('official_site'):
             embed.add_field(name="Official Site", value=f"[Click to Visit]({injector['official_site']})", inline=False)
         
-        # Add download links
         download_links = ""
         for name, url in injector['downloads'].items():
             if url and url.startswith('http'):
@@ -411,7 +416,6 @@ class InjectorSelectView(discord.ui.View):
         if download_links:
             embed.add_field(name="Downloads", value=download_links, inline=False)
         
-        # Add footer
         embed.set_footer(text=f"Select an injector from the dropdown menu above")
         
         await interaction.response.edit_message(embed=embed, view=self)
@@ -425,7 +429,6 @@ async def on_ready():
 async def check_fflags(ctx, *, json_content: str = None):
     start_time = time.time()
     
-    # Method 1: Check if there's an attachment
     if ctx.message.attachments:
         attachment = ctx.message.attachments[0]
         
@@ -449,7 +452,6 @@ async def check_fflags(ctx, *, json_content: str = None):
             
             await status_msg.delete()
             
-            # Determine method based on file extension
             if attachment.filename.lower().endswith('.json'):
                 method = "JSON File"
             else:
@@ -478,7 +480,6 @@ async def check_fflags(ctx, *, json_content: str = None):
         except Exception as e:
             await status_msg.edit(content=f"❌ Error: {str(e)}")
     
-    # Method 2: Check if there's JSON in the message
     elif json_content:
         status_msg = await ctx.send("🔄 Checking FFlags...")
         
@@ -578,11 +579,9 @@ async def list_fflags(ctx):
             await status_msg.edit(content="❌ No FFlags found or failed to fetch")
             return
         
-        # Sort FFlags alphabetically
         sorted_fflags = sorted(website_fflags.keys())
         total_fflags = len(sorted_fflags)
         
-        # Create pages with 30 FFlags per page
         fflags_per_page = 30
         pages = []
         
@@ -596,7 +595,6 @@ async def list_fflags(ctx):
         
         await status_msg.delete()
         
-        # Create initial embed
         embed = discord.Embed(
             title="📋 All FFlags",
             description=pages[0],
@@ -604,10 +602,8 @@ async def list_fflags(ctx):
         )
         embed.set_footer(text=f"Page 1/{len(pages)} | Total FFlags: {total_fflags}")
         
-        # Create paginator view with no timeout
         view = PaginatorView(pages, total_fflags, 0)
         
-        # Update button states for first page
         view.previous_page_button.disabled = True
         view.next_page_button.disabled = len(pages) == 1
         
@@ -618,7 +614,6 @@ async def list_fflags(ctx):
 
 @bot.command(name='fflaginjectors', aliases=['injectors', 'fflaginjector'])
 async def fflag_injectors(ctx):
-    # Define injectors data with permanent icon URLs
     injectors = [
         {
             "name": "Velostrap",
@@ -683,7 +678,6 @@ async def fflag_injectors(ctx):
         }
     ]
     
-    # Create initial embed with dropdown menu
     embed = discord.Embed(
         title="💉 FFlag Injectors",
         description="Select an injector from the dropdown menu below to view details and download links.",
@@ -716,8 +710,11 @@ async def fflag_offsets(ctx):
         
         await ctx.send(response)
         
-        hpp_file = FFlagChecker.create_hpp_file(cleaned_content)
-        await ctx.send(file=discord.File(hpp_file, filename=f"fflag_offsets.hpp"))
+        if cleaned_content:
+            hpp_file = FFlagChecker.create_hpp_file(cleaned_content)
+            await ctx.send(file=discord.File(hpp_file, filename=f"fflag_offsets.hpp"))
+        else:
+            await ctx.send("⚠️ No FFlag offsets were found in the file")
         
     except Exception as e:
         await status_msg.edit(content=f"❌ Error: {str(e)}")
