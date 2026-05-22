@@ -654,6 +654,49 @@ async def dumped_roblox(ctx):
     except Exception as e:
         await status_msg.edit(content=f"❌ Error fetching dumped Roblox link: {str(e)}")
 
+@bot.command(name='fflagprefixes')
+async def fflag_prefixes(ctx):
+    """Display all FFlag prefixes and their meanings"""
+    
+    # Create an embed for the prefixes
+    embed = discord.Embed(
+        title="🔤 FFlag Prefixes",
+        color=discord.Color.gold()
+    )
+    
+    # List of prefixes
+    prefixes = [
+        "DFFlag",
+        "DFInt", 
+        "DFLog",
+        "DFString",
+        "FFlag",
+        "FInt",
+        "FLog",
+        "FString"
+    ]
+    
+    # Format prefixes as bullet points
+    prefixes_list = "\n".join([f"• {prefix}" for prefix in prefixes])
+    embed.add_field(name="**FFlag Prefixes**", value=prefixes_list, inline=False)
+    
+    # What each prefix means
+    prefix_meanings = (
+        "• **DFFlag** - bool (true/false)\n"
+        "• **DFInt** - number\n"
+        "• **DFLog** - number\n"
+        "• **DFString** - string (word)\n"
+        "• **FFlag** - bool (true/false)\n"
+        "• **FInt** - number\n"
+        "• **FLog** - string (word)\n"
+        "• **FString** - string (word)"
+    )
+    
+    embed.add_field(name="**What The FFlag Prefixes Are**", value=prefix_meanings, inline=False)
+    embed.set_footer(text="FFlag Prefix Reference")
+    
+    await ctx.send(embed=embed)
+
 @bot.command(name='fflaginjectors', aliases=['injectors', 'fflaginjector'])
 async def fflag_injectors(ctx):
     injectors = [
