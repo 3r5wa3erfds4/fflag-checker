@@ -17,7 +17,7 @@ intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix=PREFIX, intents=intents)
 
-# Updated URLs
+# Fixed URLs - corrected the username from "souloverall" to "souloveryall"
 FFLAGS_URL = "https://raw.githubusercontent.com/souloveryall/JSONOffsets.json/refs/heads/main/Offsets.json"
 FFLAGS_HPP_URL = "https://raw.githubusercontent.com/souloveryall/PureOffsets.hpp/refs/heads/main/PRoffsets.hpp"
 
@@ -45,13 +45,46 @@ class FFlagChecker:
     async def fetch_fflags() -> Dict:
         async with aiohttp.ClientSession() as session:
             try:
-                async with session.get(FFLAGS_URL, timeout=10) as response:
+                # Add headers to request JSON content
+                headers = {
+                    'Accept': 'application/json, text/plain, */*',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                }
+                async with session.get(FFLAGS_URL, timeout=10, headers=headers) as response:
                     if response.status == 200:
-                        data = await response.json()
+                        # Get the text content first
+                        text_content = await response.text()
+                        
+                        # Try to parse as JSON
+                        try:
+                            data = json.loads(text_content)
+                        except json.JSONDecodeError:
+                            # If direct parsing fails, try to extract JSON from the text
+                            # The file might have comments at the top (// lines)
+                            lines = text_content.split('\n')
+                            json_lines = []
+                            in_json = False
+                            
+                            for line in lines:
+                                stripped = line.strip()
+                                if stripped.startswith('{'):
+                                    in_json = True
+                                    json_lines.append(line)
+                                elif in_json:
+                                    json_lines.append(line)
+                                    if stripped.endswith('}'):
+                                        break
+                                elif stripped.startswith('//'):
+                                    # Skip comment lines
+                                    continue
+                            
+                            json_text = '\n'.join(json_lines)
+                            data = json.loads(json_text)
+                        
                         # The new JSON format has the offsets directly in the root object
                         # with flags as keys and offsets as values
                         if isinstance(data, dict):
-                            # Remove any comment lines if they exist (they start with //)
+                            # Remove any comment keys if they exist (they start with //)
                             filtered_data = {k: v for k, v in data.items() if not k.startswith('//')}
                             return filtered_data
                         else:
@@ -65,7 +98,10 @@ class FFlagChecker:
     async def fetch_fflags_hpp() -> Tuple[str, int, str]:
         async with aiohttp.ClientSession() as session:
             try:
-                async with session.get(FFLAGS_HPP_URL, timeout=10) as response:
+                headers = {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                }
+                async with session.get(FFLAGS_HPP_URL, timeout=10, headers=headers) as response:
                     if response.status == 200:
                         content = await response.text()
                         total_offsets = FFlagChecker.extract_total_offsets(content)
