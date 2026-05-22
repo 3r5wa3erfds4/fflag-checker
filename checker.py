@@ -643,11 +643,11 @@ async def dumped_roblox(ctx):
         # Create an embed for better presentation
         embed = discord.Embed(
             title="📥 **Dumped Roblox**",
-            description=f"[Click here to download the dumped Roblox executable]({download_link})",
+            description=f"[Click here to download]({download_link})",
             color=discord.Color.green()
         )
         embed.add_field(name="⏱️ Time taken", value=FFlagChecker.format_time(total_time), inline=False)
-        embed.set_footer(text="Dumped Roblox Executable")
+        embed.set_footer(text="Dumped Roblox")
         
         await ctx.send(embed=embed)
         
