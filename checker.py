@@ -217,6 +217,7 @@ class FFlagChecker:
             if filename.lower().endswith('.json'):
                 data = json.loads(content)
                 if isinstance(data, dict):
+                    # Remove any comment keys if they exist
                     return {k: v for k, v in data.items() if not k.startswith('//')}
                 elif isinstance(data, list):
                     return {flag: "" for flag in data}
@@ -254,6 +255,42 @@ class FFlagChecker:
                 return result
         except Exception as e:
             raise Exception(f"Error parsing file: {str(e)}")
+
+    @staticmethod
+    def format_fflags_to_lua(fflags: Dict) -> str:
+        """Format FFlags into a Lua table format"""
+        lua_lines = ["getgenv().fast_flags = {"]
+        
+        for flag, value in fflags.items():
+            # Convert value to appropriate Lua type
+            if isinstance(value, bool):
+                lua_value = "true" if value else "false"
+            elif isinstance(value, (int, float)):
+                lua_value = str(value)
+            elif isinstance(value, str):
+                # Check if it's a number string or boolean string
+                if value.lower() == 'true':
+                    lua_value = "true"
+                elif value.lower() == 'false':
+                    lua_value = "false"
+                else:
+                    # Try to convert to number if possible
+                    try:
+                        num_val = float(value)
+                        if num_val.is_integer():
+                            lua_value = str(int(num_val))
+                        else:
+                            lua_value = str(num_val)
+                    except ValueError:
+                        # Keep as string, but escape quotes if needed
+                        lua_value = f'"{value}"'
+            else:
+                lua_value = str(value)
+            
+            lua_lines.append(f"    {flag} = {lua_value},")
+        
+        lua_lines.append("}")
+        return '\n'.join(lua_lines)
 
     @staticmethod
     def compare_fflags(local_fflags: Dict, website_fflags: Dict[str, str]) -> Tuple[Dict, Dict]:
@@ -307,6 +344,13 @@ class FFlagChecker:
         file_data = io.BytesIO()
         json_content = json.dumps(data, indent=4, ensure_ascii=False)
         file_data.write(json_content.encode('utf-8'))
+        file_data.seek(0)
+        return file_data
+
+    @staticmethod
+    def create_lua_file(content: str) -> io.BytesIO:
+        file_data = io.BytesIO()
+        file_data.write(content.encode('utf-8'))
         file_data.seek(0)
         return file_data
 
@@ -534,6 +578,55 @@ async def check_fflags(ctx, *, json_content: str = None):
     
     else:
         await ctx.send("❌ Please either:\n1. Upload a JSON or TXT file with the command\n2. Or provide JSON in the message\n\n**Usage:**\n`!checkfflags` (with attached file)\n`!checkfflags {\"FFlagExample\": \"True\"}`")
+
+@bot.command(name='fflagconfig')
+async def fflag_config(ctx):
+    """Format FFlags from an attached file into a Lua table configuration"""
+    
+    if not ctx.message.attachments:
+        await ctx.send("❌ Please upload a JSON or TXT file with the command.\n\n**Usage:** `!fflagconfig` (with attached file)")
+        return
+    
+    status_msg = await ctx.send("🔄 Formatting FFlags into Lua config...")
+    start_time = time.time()
+    
+    try:
+        attachment = ctx.message.attachments[0]
+        
+        if not attachment.filename.endswith(('.json', '.txt')):
+            await status_msg.edit(content="❌ Please upload a JSON or TXT file")
+            return
+        
+        file_content = await attachment.read()
+        file_text = file_content.decode('utf-8')
+        
+        # Parse the uploaded file
+        fflags_dict = FFlagChecker.parse_uploaded_file(file_text, attachment.filename)
+        
+        if not fflags_dict:
+            await status_msg.edit(content="❌ No valid FFlags found in the file")
+            return
+        
+        # Format to Lua table
+        lua_config = FFlagChecker.format_fflags_to_lua(fflags_dict)
+        
+        total_time = time.time() - start_time
+        
+        await status_msg.delete()
+        
+        # Send the Lua config
+        response = f"## 🔧 FFlag Configuration\n\n"
+        response += f"**Total FFlags:** {len(fflags_dict)}\n"
+        response += f"**⏱️ Time taken:** {FFlagChecker.format_time(total_time)}\n"
+        
+        await ctx.send(response)
+        
+        # Create and send the Lua file
+        lua_file = FFlagChecker.create_lua_file(lua_config)
+        await ctx.send(file=discord.File(lua_file, filename=f"fflag_config.lua"))
+        
+    except Exception as e:
+        await status_msg.edit(content=f"❌ Error: {str(e)}")
 
 @bot.command(name='combinefflags', aliases=['combineflags', 'fflagcombine'])
 async def combine_fflags(ctx):
